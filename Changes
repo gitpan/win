@@ -1,0 +1,6 @@
+Revision history for Perl extension win.
+
+0.01  Sun Aug 10 00:24:06 2003
+	- original version; created by h2xs 1.21 with options
+		-X -n win
+
