@@ -1,4 +1,8 @@
 Revision history for Perl extension win.
+
+_________________________________________________
+0.03  Sat Jan 10 15:00:06 2004
+- NOTE: Version 0.03 exists due to a problem with PAUSE. I will spare you the details. 
 _________________________________________________
 0.02  Mon Dec 22 15:00:06 2003
 	- Rewrote entire module.
