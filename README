@@ -1,4 +1,4 @@
-win version 0.01
+win version 0.02
 ================
 
 The goal of win, the Perl Win32 programming tool, is to make 
@@ -12,12 +12,12 @@ You can call other Win32 modules via win and if your system
 doesn't have the module, win is polite enough to download and 
 install the module for you (using PPM). 
 
-By default, win also enables a handful of basic and useful 
-Win32 modules, specifically Win32, Win32::Autoglob, and 
-Win32::Die. You can think of win as a broom that sweeps the 
-idiosyncrasies of Windows under the rug. It is good to know 
-what those idiosyncrasies are, but sometimes you don't want to 
-deal with them. If that's ever the case, then win is for you.
+By default, win also enables a few useful Win32 modules, 
+specifically Win32::Autoglob and Win32::Die. You can think of 
+win as a broom that sweeps the idiosyncrasies of Windows under
+the rug. It is good to know what those idiosyncrasies are, but 
+sometimes you don't want to deal with them. If that's ever the 
+case, then win is for you.
 
 INSTALLATION 
 
@@ -28,7 +28,7 @@ DEPENDENCIES
 
 This module requires these other modules and libraries: 
 
-Win32, Win32::Autoglob, Win32::Die, File::Which
+Win32::Autoglob, Win32::Die, File::Which
 
 COPYRIGHT AND LICENCE 
 

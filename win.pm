@@ -1,5 +1,5 @@
 package win;
-$VERSION = '0.01';
+our $VERSION = '0.02';
 require Exporter;
 our @ISA = qw(Exporter);
 
@@ -10,23 +10,62 @@ sub import {
     ($pkg) = (caller)[0];
     $current = __PACKAGE__;
 
-    $default = <<"EOF";
-use Win32;
-use Win32::Autoglob;
-use Win32::Die;
-EOF
-
     $mods = "";
 
     &rerun unless (@_);
 
     my @list = split /,/, $_[0];
+    my $found = 0;
 
-    foreach (@list) {
-        $_ =~ s/^\s+//;
-        $_ =~ s/\s+$//;
-        $mods .= "use Win32::$_;\n";
+  
+  foreach (@list) {
+         # give me everything with or without colons. 
+         /([\w\:]+)(.*)/;    
+         $pm = "Win32/$1.pm";
+ 
+        # susbstitute the colons with backslashes   
+         $pm =~ s/\:\:/\//g;
+ 
+         # give me the last part, which will be the file name, of the first regex. 
+         $suffix = $2;
+         $suffix =~ s/\s+$//; 
+
+	 # Let's see what we find.
+         foreach (@INC) {
+          next unless ( -e "$_/$pm" ); 
+            open(READ, "$_/$pm") or die "Can't read $_/$pm";
+              while ($line = <READ>) {
+                  if ( $line =~ /package\s+(Win32.*?);/i) {
+                  $mods .= "use $1$suffix;\n";   
+                  $found++;  
+                  last;
+                  }  
+                  next;
+               }  
+         last;      
+       } 
+  next; 
+  } 
+  
+    # Now we've got to give rerun a mods variable, so what do we do if we found nothing?
+    # Remember to let rerun catch any missing modules, not Win32-Die.
+    my $diev = 0;
+    if  ( ( ($found == 0) && ($#list == 0) ) || 
+            ($found != ($#list + 1)) ) { 
+
+      $mods = "";       
+      foreach (@list) {     
+        $_ =~ s/^\s+//; 
+        $_ =~ s/\s+$//; 
+        if ($mods .= "use Win32::$_;\n") {
+        $diev = 1;
+        }
+      }
     }
+    # Must prevent Win32-Die from interferring with our error catch. 
+    unless ($diev) { 
+        $mods .= "use Win32::Die;\n";
+    } 
 
     &rerun;
 
@@ -36,19 +75,17 @@ sub rerun {
 
     eval qq[
         package $pkg;
-        $default;
+        use Win32::Autoglob;
         $mods;
         package $current;
     ];
     if ($@) {
 
-        if ( $@ =~ /Can't locate/ ) {
-            &ppmcall;
-        }
-        else {
-            require Carp;
-            Carp::croak("$@");
-
+        if ($@ =~ /Can't locate/) {
+           &ppmcall;
+        } else {
+        require Carp;
+        Carp::croak("$@");
         }
     }
 }
@@ -83,20 +120,20 @@ EOF
         exit;
     }
 
-    my (@ppmods) = $mods =~ /(Win32.*?);/g;
-    foreach (@ppmods) {
-        my $pm = $_;
+    my (@ppmods) = $mods =~ /(Win32::[\w\:]+).*?;/g;
+     foreach my $pm (@ppmods) {
+        #my $pm = $_;
 
         $pm =~ s/::/\//g;
         $pm = "$pm" . ".pm";
 
         my $found = 0;
         foreach (@INC) {
-            $found++ if ( -e "$_/$pm" );
+            ++$found if ( -e "$_/$pm" );
         }
         unless ($found) {
             print "Please wait ...\n";
-            print "Activating PPM\n";
+            print "Activating PPM ( ctrl-c to abort )\n";
             my $ppm_results = `ppm install $_`;
             print "$ppm_results\n";
         }
@@ -116,12 +153,19 @@ win - Win32 programming and development tool
 
 The goal of win, the Perl Win32 programming tool, is to make Perl Win32 programming simpler, quicker, and less of a hassle. The win tool seeks to achieve its goal by:
 
-1. Addressing the integration of Win32 modules.
-2. Addressing Win32 idiosyncrasies.
+=over 0
 
-You can call other Win32 modules via win and if your system doesn't have the module, win is polite enough to download and install the module for you (using PPM). 
+=item 1. 
+Addressing the integration of Win32 modules.
 
-By default, win also enables a handful of basic and useful Win32 modules, specifically Win32, Win32::Autoglob, and Win32::Die. You can think of win as a broom that sweeps the idiosyncrasies of Windows under the rug. It is good to know what those idiosyncrasies are, but sometimes you don't want to deal with them. If that's ever the case, then win is for you.
+=item 2. 
+Addressing Win32 idiosyncrasies.
+
+=back
+
+You can call other Win32 modules with win, so your module requests will be grouped together in one import argument. And if your system doesn't have the module you requested, win, with your permission, will download and install the module for you (using PPM). 
+
+And you never have to worry about the capatilization of those Win32 modules because win will ensure the proper case. By default, win also enables the Win32::Autoglob and Win32::Die modules. 
 
 =head1 EXAMPLES
 
@@ -129,32 +173,39 @@ By default, win also enables a handful of basic and useful Win32 modules, specif
  
         use win q(ole, api);    
 
+Notice that the module names, ole and api, are not capitalized. Of course, you can capitalize them if you like, but it doesn't matter, since win will check the package name of each module requested.  
+
         # just use the default modules    
      
         use win;
+
+This is the equivalent of saying:
+
+        use Win32::Autoglob;
+        use Win32::Die;
+
+Another example:
 
         # use Win32::OLE, Win32::API, and Win32::TieRegistry
 
         use win q(  ole,
                     api,
-                    TieRegistry(Delimiter=>"/")
+                    tieregistry(Delimiter=>"/")
                  );
 
-=head1 DEFAULTS
+=head1 DEFAULT MODULES
 
-By default, win enables a few basic and useful Win32 modules. Originally, I planned for these modules to be optional. But none of them should interfere with other Win32 modules and they are relatively small. If you are concerned about the execution speed of your program, then you shouldn't be using the win tool anyway. 
+By default, win enables the Win32::Autoglob and Win32::Die modules 
 
-Here's a listing of the default modules:
-
-L<Win32>
-L<Win32::Autoglob>
-L<Win32::Die>
-
-Please see their documentation for more information about them. More modules may be added in future releases.
+For more information about these modules, please see their documentation. More modules may be added in future releases.
 
 =head1 NOTES
 
-Observe that arguments to import are passed via q// and not qw//. Of course, you could also use single quotes, but I prefer not to. Commas are the delimiter because they seem more appropriate than spaces. Also commas, unlike spaces, are rarely used in import arguments. (I thought long and hard about the delimiter. So if you can think of a better solution, please email me.) 
+Observe that arguments to import are passed via q// and not qw//. Of course, you could also use single quotes, but I prefer not to. Commas are the delimiter because they seem more appropriate than spaces. Also commas, unlike spaces, are rarely used in import arguments.
+
+An alternative for dealing with the letter case of Win32 file names is a modification of the UNIVERSAL.pm. See: 
+
+http://www.perlmonks.org/index.pl?node_id=66587 
 
 The win tool is good for rapid prototyping and everyday Win32 scripting. I wouldn't recommend using it in distributed software, but no one is stopping you.
 
